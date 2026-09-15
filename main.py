@@ -115,3 +115,11 @@ def crear_producto(producto: schemas.ProductoCreate, db: Session = Depends(get_d
     db.commit()
     db.refresh(nuevo_prod)
     return nuevo_prod
+@app.delete("/productos/{producto_id}", summary="Eliminar Producto")
+def eliminar_producto(producto_id: int, db: Session = Depends(get_db)):
+    prod = db.query(models.Producto).filter(models.Producto.id == producto_id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    db.delete(prod)
+    db.commit()
+    return {"message": "Producto eliminado exitosamente"}
