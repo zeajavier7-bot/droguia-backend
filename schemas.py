@@ -1,13 +1,14 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 
 class ProductoBase(BaseModel):
     nombre: str
-    codigo_barras: str
-    costo: float
+    codigo_barras: Optional[str] = None
+    costo: float = 0.0
     precio: float
     stock: int
+    fecha_vencimiento: Optional[date] = None
 
 class ProductoCreate(ProductoBase):
     pass
