@@ -9,12 +9,10 @@ import models
 import schemas
 from database import engine, get_db
 
-# Crear tablas en la base de datos si no existen
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="DroguIA API", version="1.0.0")
 
-# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,8 +34,7 @@ class DetalleVentaSchema(BaseModel):
 
 class VentaSchema(BaseModel):
     items: List[DetalleVentaSchema]
-    tipo_pago: str  # "contado" o "credito"
-    cliente_id: Optional[int] = None
+    tipo_pago: str  # "efectivo", "nequi", "daviplata", "tarjeta"
 
 # ==========================================
 # RUTAS DE PRODUCTOS / INVENTARIO
@@ -150,8 +147,8 @@ def eliminar_cliente(cliente_id: int, db: Session = Depends(get_db)):
 @app.post("/ventas/")
 def registrar_venta(venta: VentaSchema, db: Session = Depends(get_db)):
     caja = db.query(models.Caja).filter(models.Caja.estado == "abierta").first()
-    if venta.tipo_pago == "contado" and not caja:
-        raise HTTPException(status_code=400, detail="Debe abrir la caja antes de realizar ventas de contado.")
+    if not caja:
+        raise HTTPException(status_code=400, detail="Debe abrir la caja antes de realizar ventas.")
 
     total_venta = 0.0
 
@@ -165,15 +162,7 @@ def registrar_venta(venta: VentaSchema, db: Session = Depends(get_db)):
         prod.stock -= item.cantidad
         total_venta += prod.precio * item.cantidad
 
-    if venta.tipo_pago == "contado":
-        caja.monto_final += total_venta
-    elif venta.tipo_pago == "credito":
-        if not venta.cliente_id:
-            raise HTTPException(status_code=400, detail="Debe seleccionar un cliente para ventas a crédito")
-        cliente = db.query(models.Cliente).filter(models.Cliente.id == venta.cliente_id).first()
-        if not cliente:
-            raise HTTPException(status_code=404, detail="Cliente no encontrado")
-        cliente.deuda_actual += total_venta
+    caja.monto_final += total_venta
 
     db.commit()
     return {"message": "Venta registrada con éxito", "total": total_venta}
